@@ -1,0 +1,35 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:hotel_booking;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  h2:
+    console:
+      enabled: true
+
+app:
+  jwt:
+    secret: H2_PROFILE_REPLACE_WITH_AT_LEAST_32_CHAR_SECRET_2026
+    expiration-seconds: 86400
+  booking:
+    hold-minutes: 10
+    expire-delay-ms: 60000
+  mail:
+    enabled: false
+    from: noreply@rex.local
+  cors:
+    allowed-origins: http://localhost:5173
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true

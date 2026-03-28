@@ -1,109 +1,105 @@
 package com.cntt.rentalmanagement.domain.models;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotNull;
-
-import com.cntt.rentalmanagement.domain.enums.AuthProvider;
-import com.cntt.rentalmanagement.domain.models.audit.DateAudit;
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
-
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import com.cntt.rentalmanagement.domain.enums.UserRole;
+import com.cntt.rentalmanagement.domain.enums.VipLevel;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "users", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "email")
-})
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@JsonIdentityInfo(
-		  generator = ObjectIdGenerators.PropertyGenerator.class, 
-		  property = "id")
-public class User extends DateAudit {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+@Table(name = "users")
+public class User {
 
-	@Column(nullable = false)
-	private String name;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@Email
-	@Column(nullable = false)
-	private String email;
+    @Column(nullable = false, unique = true)
+    private String email;
 
-	private String imageUrl;
+    @Column(nullable = false)
+    private String passwordHash;
 
-	@Column(nullable = false)
-	private Boolean emailVerified = false;
+    @Column(nullable = false)
+    private String fullName;
 
-	@JsonIgnore
-	private String password;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserRole role;
 
-	@NotNull
-	@Enumerated(EnumType.STRING)
-	private AuthProvider provider;
+    @Column(nullable = false)
+    private Integer bookingCount;
 
-	private String providerId;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private VipLevel vipLevel;
 
-	@Column(name = "is_locked")
-	private Boolean isLocked;
+    public User() {
+    }
 
-	@Column(name = "is_confirmed")
-	private Boolean isConfirmed;
+    public User(String email, String passwordHash, String fullName, UserRole role) {
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.fullName = fullName;
+        this.role = role;
+        this.bookingCount = 0;
+        this.vipLevel = VipLevel.NORMAL;
+    }
 
-	private String address;
+    public Long getId() {
+        return id;
+    }
 
-	@Column(name = "phone", unique = true)
-	private String phone;
+    public String getEmail() {
+        return email;
+    }
 
-	private String zaloUrl;
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-	private String facebookUrl;
+    public String getPasswordHash() {
+        return passwordHash;
+    }
 
-	@ManyToMany(fetch = FetchType.EAGER)
-	@JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
-	private Set<Role> roles = new HashSet<>();
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
 
-	@JsonIgnore
-	@OneToMany(mappedBy = "user")
-	private List<Room> rooms;
+    public String getFullName() {
+        return fullName;
+    }
 
-    @OneToMany(mappedBy = "user")
-	@JsonIgnore
-    private List<Rate> rates;
-    
-    @OneToMany(mappedBy = "user")
-	@JsonIgnore
-    private List<Comment> comments;
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
 
-	@OneToMany(mappedBy = "user")
-	@JsonIgnore
-	private List<BlogStore> stores;
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+
+    public Integer getBookingCount() {
+        return bookingCount;
+    }
+
+    public void setBookingCount(Integer bookingCount) {
+        this.bookingCount = bookingCount;
+    }
+
+    public VipLevel getVipLevel() {
+        return vipLevel;
+    }
+
+    public void setVipLevel(VipLevel vipLevel) {
+        this.vipLevel = vipLevel;
+    }
 }

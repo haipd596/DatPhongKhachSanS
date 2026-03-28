@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: rent-manager-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: rex_booking
+      MYSQL_USER: rex
+      MYSQL_PASSWORD: rex123
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rent-manager-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: rex_booking
+      DB_USER: rex
+      DB_PASSWORD: rex123
+      APP_JWT_SECRET: REPLACE_WITH_AT_LEAST_32_CHARACTERS_SECRET_KEY_REX_2026
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
+      JAVA_OPTS: -Xms256m -Xmx512m
+    ports:
+      - "8080:8080"
+
+volumes:
+  mysql_data:

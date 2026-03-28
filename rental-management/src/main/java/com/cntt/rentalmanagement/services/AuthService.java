@@ -1,32 +1,114 @@
 package com.cntt.rentalmanagement.services;
 
+import java.time.LocalDateTime;
+import java.util.Random;
 
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.cntt.rentalmanagement.config.JwtService;
+import com.cntt.rentalmanagement.domain.enums.UserRole;
+import com.cntt.rentalmanagement.domain.models.PasswordResetToken;
+import com.cntt.rentalmanagement.domain.models.User;
+import com.cntt.rentalmanagement.domain.payload.request.ForgotPasswordRequest;
+import com.cntt.rentalmanagement.domain.payload.request.LoginRequest;
+import com.cntt.rentalmanagement.domain.payload.request.RegisterRequest;
+import com.cntt.rentalmanagement.domain.payload.request.ResetPasswordRequest;
+import com.cntt.rentalmanagement.domain.payload.response.AuthResponse;
+import com.cntt.rentalmanagement.exception.ApiException;
+import com.cntt.rentalmanagement.repository.PasswordResetTokenRepository;
+import com.cntt.rentalmanagement.repository.UserRepository;
 
-import com.cntt.rentalmanagement.domain.payload.request.*;
-import com.cntt.rentalmanagement.domain.payload.response.MessageResponse;
-import org.springframework.web.multipart.MultipartFile;
+@Service
+public class AuthService {
 
-import javax.mail.MessagingException;
-import java.io.IOException;
-import java.net.URI;
+    private final UserRepository userRepository;
+    private final PasswordResetTokenRepository tokenRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
+    private final BookingNotificationService bookingNotificationService;
+    private final Random random = new Random();
 
-public interface AuthService {
-    URI registerAccount(SignUpRequest signUpRequest) throws MessagingException, IOException;
+    public AuthService(UserRepository userRepository,
+                       PasswordResetTokenRepository tokenRepository,
+                       PasswordEncoder passwordEncoder,
+                       AuthenticationManager authenticationManager,
+                       JwtService jwtService,
+                       BookingNotificationService bookingNotificationService) {
+        this.userRepository = userRepository;
+        this.tokenRepository = tokenRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
+        this.bookingNotificationService = bookingNotificationService;
+    }
 
-    String login(LoginRequest loginRequest);
+    @Transactional
+    public AuthResponse register(RegisterRequest request) {
+        String email = request.email().toLowerCase().trim();
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new ApiException("Email da ton tai");
+        }
+        User user = new User(
+            email,
+            passwordEncoder.encode(request.password()),
+            request.fullName().trim(),
+            UserRole.CUSTOMER
+        );
+        userRepository.save(user);
+        return toAuthResponse(user);
+    }
 
-    MessageResponse forgotPassword(EmailRequest emailRequest) throws MessagingException, IOException;
+    public AuthResponse login(LoginRequest request) {
+        String email = request.email().toLowerCase().trim();
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.password()));
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new ApiException("Sai thong tin dang nhap"));
+        return toAuthResponse(user);
+    }
 
-    MessageResponse resetPassword(ResetPasswordRequest resetPasswordRequest);
+    @Transactional
+    public String forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.email().toLowerCase().trim())
+            .orElseThrow(() -> new ApiException("Email khong ton tai"));
+        String code = String.valueOf(100000 + random.nextInt(900000));
+        PasswordResetToken token = new PasswordResetToken(code, user, LocalDateTime.now().plusMinutes(15));
+        tokenRepository.save(token);
+        bookingNotificationService.sendPasswordResetCode(user.getEmail(), code);
+        return code;
+    }
 
-    MessageResponse confirmedAccount(EmailRequest emailRequest);
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        PasswordResetToken token = tokenRepository.findTopByCodeAndUsedFalseOrderByIdDesc(request.code())
+            .orElseThrow(() -> new ApiException("Ma reset khong hop le"));
+        if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ApiException("Ma reset da het han");
+        }
+        User user = token.getUser();
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        token.setUsed(true);
+        userRepository.save(user);
+        tokenRepository.save(token);
+    }
 
-    MessageResponse changePassword(ChangePasswordRequest changePasswordRequest);
+    public AuthResponse me(String email) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new ApiException("Khong tim thay nguoi dung"));
+        return toAuthResponse(user);
+    }
 
-    MessageResponse changeImage(MultipartFile file);
-
-    MessageResponse lockAccount(Long id);
-
-    MessageResponse uploadProfile(MultipartFile file, String zalo, String facebook, String address);
+    private AuthResponse toAuthResponse(User user) {
+        return new AuthResponse(
+            jwtService.generateToken(user),
+            user.getEmail(),
+            user.getFullName(),
+            user.getRole().name(),
+            user.getVipLevel().name()
+        );
+    }
 }

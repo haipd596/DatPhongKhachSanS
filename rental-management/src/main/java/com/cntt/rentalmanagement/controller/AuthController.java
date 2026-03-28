@@ -1,73 +1,57 @@
 package com.cntt.rentalmanagement.controller;
 
-import com.cntt.rentalmanagement.domain.payload.request.*;
-import com.cntt.rentalmanagement.domain.payload.response.ApiResponse;
+import java.security.Principal;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.cntt.rentalmanagement.domain.payload.request.ForgotPasswordRequest;
+import com.cntt.rentalmanagement.domain.payload.request.LoginRequest;
+import com.cntt.rentalmanagement.domain.payload.request.RegisterRequest;
+import com.cntt.rentalmanagement.domain.payload.request.ResetPasswordRequest;
 import com.cntt.rentalmanagement.domain.payload.response.AuthResponse;
 import com.cntt.rentalmanagement.services.AuthService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-
-import javax.mail.MessagingException;
-import javax.validation.Valid;
-import java.io.IOException;
 
 @RestController
-@RequestMapping("/auth")
-@RequiredArgsConstructor
+@RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        return ResponseEntity.ok(new AuthResponse(authService.login(loginRequest)));
+    public AuthController(AuthService authService) {
+        this.authService = authService;
     }
 
-    @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody SignUpRequest signUpRequest) throws MessagingException, IOException {
-        return ResponseEntity.created(authService.registerAccount(signUpRequest))
-                .body(new ApiResponse(true, "User registered successfully@"));
+    @PostMapping("/register")
+    public ResponseEntity<AuthResponse> register(@Validated @RequestBody RegisterRequest request) {
+        return ResponseEntity.ok(authService.register(request));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@Validated @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@Valid @RequestBody EmailRequest emailRequest) throws MessagingException, IOException {
-        return ResponseEntity.ok(authService.forgotPassword(emailRequest));
+    public ResponseEntity<Map<String, String>> forgotPassword(@Validated @RequestBody ForgotPasswordRequest request) {
+        String code = authService.forgotPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Da gui ma reset", "debugResetCode", code));
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest resetPasswordRequest) {
-        return ResponseEntity.ok(authService.resetPassword(resetPasswordRequest));
+    public ResponseEntity<Map<String, String>> resetPassword(@Validated @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Doi mat khau thanh cong"));
     }
 
-    @PostMapping("/confirmed")
-    public ResponseEntity<?> confirmedAccount(@RequestBody EmailRequest emailRequest){
-        return ResponseEntity.ok(authService.confirmedAccount(emailRequest));
-    }
-
-    @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest changePasswordRequest) {
-        return ResponseEntity.ok(authService.changePassword(changePasswordRequest));
-    }
-
-    @PostMapping("/upload-avatar")
-    public  ResponseEntity<?> changeImage(@RequestParam(required = false) MultipartFile file){
-        return ResponseEntity.ok(authService.changeImage(file));
-    }
-
-    @PostMapping("/upload-profile")
-    public ResponseEntity<?> changeImage(@RequestParam(required = false) MultipartFile file,
-                                         @RequestParam(required = false) String zalo,
-                                         @RequestParam(required = false) String facebook,
-                                         @RequestParam(required = false) String address) {
-        return ResponseEntity.ok(authService.uploadProfile(file, zalo, facebook, address));
-    }
-
-
-    @PostMapping("/{id}/locked")
-    private ResponseEntity<?> lockedAccount(@PathVariable Long id) {
-        return ResponseEntity.ok(authService.lockAccount(id));
+    @GetMapping("/me")
+    public ResponseEntity<AuthResponse> me(Principal principal) {
+        return ResponseEntity.ok(authService.me(principal.getName()));
     }
 }

@@ -1,12 +1,10 @@
 package com.cntt.rentalmanagement.domain.payload.request;
 
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
-@Getter
-@Setter
-public class ResetPasswordRequest {
-    private String email;
-    private String password;
-    private String confirmedPassword;
+public record ResetPasswordRequest(
+    @NotBlank @Size(min = 6, max = 72) String newPassword,
+    @NotBlank @Size(min = 6, max = 8) String code
+) {
 }

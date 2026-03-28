@@ -1,45 +1,171 @@
 package com.cntt.rentalmanagement.services;
 
-import com.cntt.rentalmanagement.domain.enums.RoomStatus;
-import com.cntt.rentalmanagement.domain.models.DTO.CommentDTO;
-import com.cntt.rentalmanagement.domain.models.Room;
-import com.cntt.rentalmanagement.domain.models.User;
-import com.cntt.rentalmanagement.domain.payload.request.RoomRequest;
-import com.cntt.rentalmanagement.domain.payload.response.MessageResponse;
-import com.cntt.rentalmanagement.domain.payload.response.RoomResponse;
-
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
-import org.springframework.data.domain.Page;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-public interface RoomService {
+import com.cntt.rentalmanagement.domain.enums.BookingStatus;
+import com.cntt.rentalmanagement.domain.enums.RoomStatus;
+import com.cntt.rentalmanagement.domain.models.Room;
+import com.cntt.rentalmanagement.domain.models.RoomType;
+import com.cntt.rentalmanagement.domain.payload.request.RoomRequest;
+import com.cntt.rentalmanagement.domain.payload.request.RoomTypeRequest;
+import com.cntt.rentalmanagement.domain.payload.response.AvailabilitySummaryResponse;
+import com.cntt.rentalmanagement.domain.payload.response.RoomResponse;
+import com.cntt.rentalmanagement.domain.payload.response.RoomTypeResponse;
+import com.cntt.rentalmanagement.exception.ApiException;
+import com.cntt.rentalmanagement.repository.BookingRepository;
+import com.cntt.rentalmanagement.repository.RoomRepository;
+import com.cntt.rentalmanagement.repository.RoomTypeRepository;
 
-    MessageResponse addNewRoom(RoomRequest roomRequest);
+@Service
+public class RoomService {
 
-    Page<RoomResponse> getRoomByRentaler(String title, Integer pageNo, Integer pageSize);
+    private static final Set<BookingStatus> BLOCKING_STATUSES = Set.of(BookingStatus.HOLD, BookingStatus.CONFIRMED);
 
-    RoomResponse getRoomById(Long id);
+    private final RoomTypeRepository roomTypeRepository;
+    private final RoomRepository roomRepository;
+    private final BookingRepository bookingRepository;
 
-    Room getRoom(Long id);
+    public RoomService(RoomTypeRepository roomTypeRepository, RoomRepository roomRepository, BookingRepository bookingRepository) {
+        this.roomTypeRepository = roomTypeRepository;
+        this.roomRepository = roomRepository;
+        this.bookingRepository = bookingRepository;
+    }
 
-    MessageResponse disableRoom(Long id);
+    public List<RoomTypeResponse> getAllRoomTypes() {
+        return roomTypeRepository.findAll().stream().map(this::toRoomTypeResponse).toList();
+    }
 
-    MessageResponse updateRoomInfo(Long id, RoomRequest roomRequest);
+    public List<RoomResponse> getAllRooms() {
+        return roomRepository.findAll().stream().map(this::toRoomResponse).toList();
+    }
 
-    Page<RoomResponse> getRentOfHome();
-    MessageResponse checkoutRoom(Long id);
+    @Transactional
+    public RoomTypeResponse createRoomType(RoomTypeRequest request) {
+        if (roomTypeRepository.findByNameIgnoreCase(request.name().trim()).isPresent()) {
+            throw new ApiException("Loai phong da ton tai");
+        }
+        RoomType roomType = new RoomType(
+            request.name().trim(),
+            request.basePrice(),
+            request.maxGuests(),
+            request.description()
+        );
+        roomTypeRepository.save(roomType);
+        return toRoomTypeResponse(roomType);
+    }
 
-    MessageResponse isApproveRoom(Long id);
+    @Transactional
+    public RoomTypeResponse updateRoomType(Long id, RoomTypeRequest request) {
+        RoomType roomType = roomTypeRepository.findById(id).orElseThrow(() -> new ApiException("Khong tim thay loai phong"));
+        roomType.setName(request.name().trim());
+        roomType.setBasePrice(request.basePrice());
+        roomType.setMaxGuests(request.maxGuests());
+        roomType.setDescription(request.description());
+        roomTypeRepository.save(roomType);
+        return toRoomTypeResponse(roomType);
+    }
 
-    MessageResponse removeRoom(Long id);
+    @Transactional
+    public void deleteRoomType(Long id) {
+        roomTypeRepository.deleteById(id);
+    }
 
-	String addComment(Long id, CommentDTO commentDTO);
+    @Transactional
+    public RoomResponse createRoom(RoomRequest request) {
+        if (roomRepository.findByCode(request.code().trim().toUpperCase()).isPresent()) {
+            throw new ApiException("Ma phong da ton tai");
+        }
+        RoomType roomType = roomTypeRepository.findById(request.roomTypeId())
+            .orElseThrow(() -> new ApiException("Loai phong khong ton tai"));
+        Room room = new Room(request.code().trim().toUpperCase(), request.floorNumber(), roomType);
+        room.setStatus(parseRoomStatus(request.status()));
+        roomRepository.save(room);
+        return toRoomResponse(room);
+    }
 
-	List<CommentDTO> getAllCommentRoom(Long id);
+    @Transactional
+    public RoomResponse updateRoom(Long id, RoomRequest request) {
+        Room room = roomRepository.findById(id).orElseThrow(() -> new ApiException("Khong tim thay phong"));
+        RoomType roomType = roomTypeRepository.findById(request.roomTypeId())
+            .orElseThrow(() -> new ApiException("Loai phong khong ton tai"));
+        room.setCode(request.code().trim().toUpperCase());
+        room.setFloorNumber(request.floorNumber());
+        room.setRoomType(roomType);
+        room.setStatus(parseRoomStatus(request.status()));
+        roomRepository.save(room);
+        return toRoomResponse(room);
+    }
 
-    Page<RoomResponse> getAllRoomForAdmin(String title,Boolean approve, Integer pageNo, Integer pageSize);
+    @Transactional
+    public void deleteRoom(Long id) {
+        roomRepository.deleteById(id);
+    }
 
-    Page<RoomResponse> getRoomByUserId(Long userId, Integer pageNo, Integer pageSize);
-    List<RoomResponse> getRoomByUser(User user);
-    Room updateRoom(Room room, Long id);
+    public List<RoomResponse> getAvailableRooms(LocalDate checkInDate, LocalDate checkOutDate) {
+        validateDateRange(checkInDate, checkOutDate);
+        return roomRepository.findByStatus(RoomStatus.AVAILABLE).stream()
+            .filter(room -> bookingRepository.countOverlapping(
+                room.getId(), BLOCKING_STATUSES, checkInDate, checkOutDate
+            ) == 0)
+            .map(this::toRoomResponse)
+            .toList();
+    }
+
+    public List<AvailabilitySummaryResponse> getAvailabilitySummary(LocalDate checkInDate, LocalDate checkOutDate) {
+        validateDateRange(checkInDate, checkOutDate);
+        return roomTypeRepository.findAll().stream().map(roomType -> {
+            long total = roomRepository.countByRoomTypeIdAndStatus(roomType.getId(), RoomStatus.AVAILABLE);
+            long reserved = bookingRepository.countOverlappingByRoomType(
+                roomType.getId(), BLOCKING_STATUSES, checkInDate, checkOutDate
+            );
+            long available = Math.max(total - reserved, 0);
+            return new AvailabilitySummaryResponse(roomType.getId(), roomType.getName(), total, reserved, available);
+        }).toList();
+    }
+
+    private void validateDateRange(LocalDate checkInDate, LocalDate checkOutDate) {
+        if (checkInDate == null || checkOutDate == null) {
+            throw new ApiException("Can truyen checkIn va checkOut");
+        }
+        if (!checkInDate.isBefore(checkOutDate)) {
+            throw new ApiException("Check-out phai sau check-in");
+        }
+    }
+
+    private RoomTypeResponse toRoomTypeResponse(RoomType roomType) {
+        return new RoomTypeResponse(
+            roomType.getId(),
+            roomType.getName(),
+            roomType.getBasePrice(),
+            roomType.getMaxGuests(),
+            roomType.getDescription()
+        );
+    }
+
+    private RoomResponse toRoomResponse(Room room) {
+        RoomType type = room.getRoomType();
+        return new RoomResponse(
+            room.getId(),
+            room.getCode(),
+            room.getFloorNumber(),
+            room.getStatus().name(),
+            type.getId(),
+            type.getName(),
+            type.getBasePrice(),
+            type.getMaxGuests()
+        );
+    }
+
+    private RoomStatus parseRoomStatus(String value) {
+        try {
+            return RoomStatus.valueOf(value.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new ApiException("Trang thai phong khong hop le");
+        }
+    }
 }

@@ -1,19 +1,15 @@
 package com.cntt.rentalmanagement.repository;
 
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import com.cntt.rentalmanagement.domain.enums.RoomStatus;
 import com.cntt.rentalmanagement.domain.models.Room;
-import com.cntt.rentalmanagement.domain.models.User;
-import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.List;
 
-public interface RoomRepository extends JpaRepository<Room, Long>, RoomRepositoryCustom {
-    long countAllByUser(User user);
-
-    long count();
-
-    long countAllByStatusAndUser(RoomStatus status, User user);
-
-    List<Room> findByUser(User user);
-
-    long countByIsApprove(Boolean isApprove);
+public interface RoomRepository extends JpaRepository<Room, Long> {
+    Optional<Room> findByCode(String code);
+    List<Room> findByStatus(RoomStatus status);
+    long countByRoomTypeIdAndStatus(Long roomTypeId, RoomStatus status);
 }
