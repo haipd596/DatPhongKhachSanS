@@ -55,4 +55,28 @@ public class PaymentTransaction {
     public Long getId() {
         return id;
     }
+
+    public Booking getBooking() {
+        return booking;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public PaymentStatus getStatus() {
+        return status;
+    }
+
+    public String getTransactionCode() {
+        return transactionCode;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 }
