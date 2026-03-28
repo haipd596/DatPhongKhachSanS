@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +27,7 @@ import com.cntt.rentalmanagement.repository.UserRepository;
 import com.cntt.rentalmanagement.services.VipPolicyService;
 
 @Component
+@Profile("!prod")
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
