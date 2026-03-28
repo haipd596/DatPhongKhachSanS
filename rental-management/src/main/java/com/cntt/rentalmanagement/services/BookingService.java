@@ -54,21 +54,21 @@ public class BookingService {
         LocalDate checkIn = request.checkInDate();
         LocalDate checkOut = request.checkOutDate();
         if (checkIn == null || checkOut == null || !checkIn.isBefore(checkOut)) {
-            throw new ApiException("Ngay nhan/tra phong khong hop le");
+            throw new ApiException("Ngày nhận phòng và ngày trả phòng không hợp lệ");
         }
         if (checkIn.isBefore(LocalDate.now())) {
-            throw new ApiException("Khong the dat phong trong qua khu");
+            throw new ApiException("Không thể đặt phòng trong quá khứ");
         }
 
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new ApiException("Khong tim thay user"));
-        Room room = roomRepository.findById(request.roomId()).orElseThrow(() -> new ApiException("Khong tim thay phong"));
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new ApiException("Không tìm thấy người dùng"));
+        Room room = roomRepository.findById(request.roomId()).orElseThrow(() -> new ApiException("Không tìm thấy phòng"));
         if (room.getStatus() != RoomStatus.AVAILABLE) {
-            throw new ApiException("Phong hien khong kha dung");
+            throw new ApiException("Phòng hiện không khả dụng");
         }
 
         long overlapping = bookingRepository.countOverlapping(room.getId(), BLOCKING_STATUSES, checkIn, checkOut);
         if (overlapping > 0) {
-            throw new ApiException("Phong da duoc dat hoac dang giu o khung thoi gian nay");
+            throw new ApiException("Phòng đã được đặt hoặc đang được giữ trong khung thời gian này");
         }
 
         long nights = ChronoUnit.DAYS.between(checkIn, checkOut);
@@ -88,15 +88,15 @@ public class BookingService {
 
     public Booking getOwnedBooking(Long bookingId, String email) {
         return bookingRepository.findByIdAndUserEmail(bookingId, email)
-            .orElseThrow(() -> new ApiException("Khong tim thay booking"));
+            .orElseThrow(() -> new ApiException("Không tìm thấy đơn đặt phòng"));
     }
 
     @Transactional
     public BookingResponse cancel(Long bookingId, String email) {
         Booking booking = bookingRepository.findByIdAndUserEmail(bookingId, email)
-            .orElseThrow(() -> new ApiException("Khong tim thay booking"));
+            .orElseThrow(() -> new ApiException("Không tìm thấy đơn đặt phòng"));
         if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.EXPIRED) {
-            throw new ApiException("Booking da o trang thai huy/het han");
+            throw new ApiException("Đơn đặt phòng đã ở trạng thái hủy hoặc hết hạn");
         }
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setHoldExpiresAt(null);
@@ -108,15 +108,15 @@ public class BookingService {
     @Transactional
     public Booking confirmPaymentSuccess(Long bookingId, String email) {
         Booking booking = bookingRepository.findByIdAndUserEmail(bookingId, email)
-            .orElseThrow(() -> new ApiException("Khong tim thay booking"));
+            .orElseThrow(() -> new ApiException("Không tìm thấy đơn đặt phòng"));
         if (booking.getStatus() != BookingStatus.HOLD) {
-            throw new ApiException("Booking khong o trang thai cho thanh toan");
+            throw new ApiException("Đơn đặt phòng không ở trạng thái chờ thanh toán");
         }
         if (booking.getHoldExpiresAt() != null && booking.getHoldExpiresAt().isBefore(LocalDateTime.now())) {
             booking.setStatus(BookingStatus.EXPIRED);
             booking.setHoldExpiresAt(null);
             bookingRepository.save(booking);
-            throw new ApiException("Booking da het thoi gian giu phong");
+            throw new ApiException("Đơn đặt phòng đã hết thời gian giữ phòng");
         }
         booking.setStatus(BookingStatus.CONFIRMED);
         booking.setHoldExpiresAt(null);

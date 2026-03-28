@@ -19,9 +19,9 @@ public class OpenApiConfig {
     public OpenAPI hotelBookingOpenApi() {
         return new OpenAPI()
             .info(new Info()
-                .title("Rent Manager Hotel Booking API")
+                .title("API Đặt Phòng Khách Sạn Rent Manager")
                 .version("v1")
-                .description("Tai lieu API backend dat phong khach san da migrate vao du an Rent Manager.")
+                .description("Tài liệu API backend đặt phòng khách sạn đã được migrate vào dự án Rent Manager.")
                 .contact(new Contact().name("Rent Manager App")))
             .addSecurityItem(new SecurityRequirement().addList(BEARER_SCHEME))
             .components(new Components()

@@ -41,13 +41,13 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, String>> forgotPassword(@Validated @RequestBody ForgotPasswordRequest request) {
         String code = authService.forgotPassword(request);
-        return ResponseEntity.ok(Map.of("message", "Da gui ma reset", "debugResetCode", code));
+        return ResponseEntity.ok(Map.of("message", "Đã gửi mã đặt lại mật khẩu", "debugResetCode", code));
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<Map<String, String>> resetPassword(@Validated @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
-        return ResponseEntity.ok(Map.of("message", "Doi mat khau thanh cong"));
+        return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công"));
     }
 
     @GetMapping("/me")

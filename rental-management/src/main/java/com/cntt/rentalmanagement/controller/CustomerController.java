@@ -27,7 +27,7 @@ public class CustomerController {
 
     @GetMapping("/me/vip")
     public ResponseEntity<Map<String, Object>> myVip(Principal principal) {
-        User user = userRepository.findByEmail(principal.getName()).orElseThrow(() -> new ApiException("Khong tim thay user"));
+        User user = userRepository.findByEmail(principal.getName()).orElseThrow(() -> new ApiException("Không tìm thấy người dùng"));
         return ResponseEntity.ok(Map.of(
             "bookingCount", user.getBookingCount(),
             "vipLevel", user.getVipLevel().name(),

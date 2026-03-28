@@ -49,7 +49,7 @@ public class BookingController {
 
     @GetMapping("/{id}/pdf")
     public ResponseEntity<byte[]> exportPdf(@PathVariable("id") Long id,
-                                            @RequestParam(name = "purpose", defaultValue = "Dat phong") String purpose,
+                                            @RequestParam(name = "purpose", defaultValue = "Đặt phòng") String purpose,
                                             Principal principal) {
         byte[] content = bookingPdfService.generateBookingDocument(bookingService.getOwnedBooking(id, principal.getName()), purpose);
         return ResponseEntity.ok()

@@ -51,7 +51,7 @@ public class AuthService {
     public AuthResponse register(RegisterRequest request) {
         String email = request.email().toLowerCase().trim();
         if (userRepository.findByEmail(email).isPresent()) {
-            throw new ApiException("Email da ton tai");
+            throw new ApiException("Email đã tồn tại");
         }
         User user = new User(
             email,
@@ -67,14 +67,14 @@ public class AuthService {
         String email = request.email().toLowerCase().trim();
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.password()));
         User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new ApiException("Sai thong tin dang nhap"));
+            .orElseThrow(() -> new ApiException("Thông tin đăng nhập không hợp lệ"));
         return toAuthResponse(user);
     }
 
     @Transactional
     public String forgotPassword(ForgotPasswordRequest request) {
         User user = userRepository.findByEmail(request.email().toLowerCase().trim())
-            .orElseThrow(() -> new ApiException("Email khong ton tai"));
+            .orElseThrow(() -> new ApiException("Email không tồn tại"));
         String code = String.valueOf(100000 + random.nextInt(900000));
         PasswordResetToken token = new PasswordResetToken(code, user, LocalDateTime.now().plusMinutes(15));
         tokenRepository.save(token);
@@ -85,9 +85,9 @@ public class AuthService {
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         PasswordResetToken token = tokenRepository.findTopByCodeAndUsedFalseOrderByIdDesc(request.code())
-            .orElseThrow(() -> new ApiException("Ma reset khong hop le"));
+            .orElseThrow(() -> new ApiException("Mã đặt lại mật khẩu không hợp lệ"));
         if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new ApiException("Ma reset da het han");
+            throw new ApiException("Mã đặt lại mật khẩu đã hết hạn");
         }
         User user = token.getUser();
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
@@ -98,7 +98,7 @@ public class AuthService {
 
     public AuthResponse me(String email) {
         User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new ApiException("Khong tim thay nguoi dung"));
+            .orElseThrow(() -> new ApiException("Không tìm thấy người dùng"));
         return toAuthResponse(user);
     }
 

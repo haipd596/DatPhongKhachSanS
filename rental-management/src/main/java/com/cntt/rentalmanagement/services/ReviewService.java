@@ -26,7 +26,7 @@ public class ReviewService {
 
     @Transactional
     public ReviewResponse create(String email, ReviewRequest request) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new ApiException("Khong tim thay user"));
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new ApiException("Không tìm thấy người dùng"));
         Review review = new Review(user, request.rating(), request.comment().trim());
         reviewRepository.save(review);
         return toResponse(review);

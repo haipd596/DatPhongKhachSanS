@@ -47,7 +47,7 @@ public class RoomService {
     @Transactional
     public RoomTypeResponse createRoomType(RoomTypeRequest request) {
         if (roomTypeRepository.findByNameIgnoreCase(request.name().trim()).isPresent()) {
-            throw new ApiException("Loai phong da ton tai");
+            throw new ApiException("Loại phòng đã tồn tại");
         }
         RoomType roomType = new RoomType(
             request.name().trim(),
@@ -61,7 +61,7 @@ public class RoomService {
 
     @Transactional
     public RoomTypeResponse updateRoomType(Long id, RoomTypeRequest request) {
-        RoomType roomType = roomTypeRepository.findById(id).orElseThrow(() -> new ApiException("Khong tim thay loai phong"));
+        RoomType roomType = roomTypeRepository.findById(id).orElseThrow(() -> new ApiException("Không tìm thấy loại phòng"));
         roomType.setName(request.name().trim());
         roomType.setBasePrice(request.basePrice());
         roomType.setMaxGuests(request.maxGuests());
@@ -78,10 +78,10 @@ public class RoomService {
     @Transactional
     public RoomResponse createRoom(RoomRequest request) {
         if (roomRepository.findByCode(request.code().trim().toUpperCase()).isPresent()) {
-            throw new ApiException("Ma phong da ton tai");
+            throw new ApiException("Mã phòng đã tồn tại");
         }
         RoomType roomType = roomTypeRepository.findById(request.roomTypeId())
-            .orElseThrow(() -> new ApiException("Loai phong khong ton tai"));
+            .orElseThrow(() -> new ApiException("Loại phòng không tồn tại"));
         Room room = new Room(request.code().trim().toUpperCase(), request.floorNumber(), roomType);
         room.setStatus(parseRoomStatus(request.status()));
         roomRepository.save(room);
@@ -90,9 +90,9 @@ public class RoomService {
 
     @Transactional
     public RoomResponse updateRoom(Long id, RoomRequest request) {
-        Room room = roomRepository.findById(id).orElseThrow(() -> new ApiException("Khong tim thay phong"));
+        Room room = roomRepository.findById(id).orElseThrow(() -> new ApiException("Không tìm thấy phòng"));
         RoomType roomType = roomTypeRepository.findById(request.roomTypeId())
-            .orElseThrow(() -> new ApiException("Loai phong khong ton tai"));
+            .orElseThrow(() -> new ApiException("Loại phòng không tồn tại"));
         room.setCode(request.code().trim().toUpperCase());
         room.setFloorNumber(request.floorNumber());
         room.setRoomType(roomType);
@@ -130,10 +130,10 @@ public class RoomService {
 
     private void validateDateRange(LocalDate checkInDate, LocalDate checkOutDate) {
         if (checkInDate == null || checkOutDate == null) {
-            throw new ApiException("Can truyen checkIn va checkOut");
+            throw new ApiException("Cần truyền ngày nhận phòng và ngày trả phòng");
         }
         if (!checkInDate.isBefore(checkOutDate)) {
-            throw new ApiException("Check-out phai sau check-in");
+            throw new ApiException("Ngày trả phòng phải sau ngày nhận phòng");
         }
     }
 
@@ -165,7 +165,7 @@ public class RoomService {
         try {
             return RoomStatus.valueOf(value.toUpperCase());
         } catch (IllegalArgumentException ex) {
-            throw new ApiException("Trang thai phong khong hop le");
+            throw new ApiException("Trạng thái phòng không hợp lệ");
         }
     }
 }

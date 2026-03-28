@@ -16,28 +16,28 @@ public class BookingNotificationService {
     public void sendHoldConfirmation(Booking booking) {
         emailService.send(
             booking.getUser().getEmail(),
-            "Rex Sai Gon - Giu phong thanh cong",
-            "Booking #" + booking.getId() + " da duoc giu den " + booking.getHoldExpiresAt()
+            "Rex Sai Gon - Giữ phòng thành công",
+            "Đơn đặt phòng #" + booking.getId() + " đã được giữ đến " + booking.getHoldExpiresAt()
         );
     }
 
     public void sendBookingConfirmed(Booking booking) {
         emailService.send(
             booking.getUser().getEmail(),
-            "Rex Sai Gon - Dat phong thanh cong",
-            "Booking #" + booking.getId() + " da thanh toan thanh cong. Tong tien: " + booking.getTotalAmount()
+            "Rex Sai Gon - Đặt phòng thành công",
+            "Đơn đặt phòng #" + booking.getId() + " đã thanh toán thành công. Tổng tiền: " + booking.getTotalAmount()
         );
     }
 
     public void sendBookingCancelled(Booking booking) {
         emailService.send(
             booking.getUser().getEmail(),
-            "Rex Sai Gon - Huy phong thanh cong",
-            "Booking #" + booking.getId() + " da duoc huy."
+            "Rex Sai Gon - Hủy phòng thành công",
+            "Đơn đặt phòng #" + booking.getId() + " đã được hủy."
         );
     }
 
     public void sendPasswordResetCode(String email, String code) {
-        emailService.send(email, "Rex Sai Gon - Ma doi mat khau", "Ma doi mat khau cua ban la: " + code);
+        emailService.send(email, "Rex Sai Gon - Mã đổi mật khẩu", "Mã đổi mật khẩu của bạn là: " + code);
     }
 }
