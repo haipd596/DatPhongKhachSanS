@@ -1,0 +1,8 @@
+.git
+.gitignore
+rent-manager-app/node_modules
+rent-manager-app/build
+rental-management/target
+**/node_modules
+**/build
+**/target
