@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import jwtDecode from "jwt-decode";
 import { useUserContext } from "../context/UserContext";
 import SockJS from 'sockjs-client';
-import Stomp from 'stompjs';
+import { Stomp } from '@stomp/stompjs';
 import '../style.css'
 
 const Input = () => {
